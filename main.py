@@ -133,7 +133,7 @@ USER_PROMPT_TEMPLATE = """กลุ่ม: {group_name}
 
 # 7. ACTION ITEMS
 | # | Project | Action Item | Responsible | Due Date | Priority | Status |
-|---|---------|-------------|-------------|----------|----------|---------|
+|---|---------|-------------|-------------|----------|----------|--------|
 
 หากไม่มีประเด็นสำคัญใน Project ใด ให้แสดง: 🟢 No Critical Issue / On Track
 หากไม่มีข้อมูลในส่วนใด ให้ระบุ TBC"""
@@ -200,6 +200,16 @@ def daily_summary_job():
             send_email(f"สรุปงาน LINE {yesterday}", body)
         except Exception as e:
             print(f"[ERROR] Email failed: {e}")
+
+
+# ─── Manual Trigger ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@app.route("/trigger", methods=["GET"])
+def trigger():
+    try:
+        daily_summary_job()
+        return "OK: trigger fired"
+    except Exception as e:
+        return f"ERROR: {e}", 500
 
 
 # ─── Webhook ──────────────────────────────────────────────────────────────────────────────────────
