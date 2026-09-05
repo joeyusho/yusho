@@ -13,7 +13,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage
 
-# ─── App Setup ──────────────────────────────────────────────────────────────────────────────────
+# ─── App Setup ──────────────────────────────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 
 LINE_CHANNEL_SECRET = os.environ["LINE_CHANNEL_SECRET"]
@@ -21,8 +21,8 @@ LINE_CHANNEL_ACCESS_TOKEN = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 
 # Email settings
-EMAIL_SENDER   = os.environ["EMAIL_SENDER"]    # Gmail address ที่ใช้ส่ง
-EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]  # Gmail App Password (16 ตัวอักษร)
+EMAIL_SENDER   = os.environ["EMAIL_SENDER"]
+EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 EMAIL_RECIPIENT = os.environ.get("EMAIL_RECIPIENT", "joeyusho@gmail.com")
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
@@ -49,7 +49,7 @@ claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, default_headers=_ws_head
 BANGKOK_TZ = pytz.timezone("Asia/Bangkok")
 DB_PATH = "messages.db"
 
-# ─── Database ─────────────────────────────────────────────────────────────────────────────────────
+# ─── Database ──────────────────────────────────────────────────────────────────────────────────────────────────────
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("""
@@ -76,7 +76,6 @@ def save_message(group_id: str, group_name: str, sender_name: str, message: str)
 
 
 def get_messages_by_date(date_str: str):
-    """Return {group_id: {name, messages[]}} for a given date (YYYY-MM-DD)."""
     with sqlite3.connect(DB_PATH) as conn:
         rows = conn.execute(
             "SELECT group_id, group_name, sender_name, message FROM messages WHERE created_at LIKE ?",
@@ -91,7 +90,7 @@ def get_messages_by_date(date_str: str):
     return groups
 
 
-# ─── Summariser ───────────────────────────────────────────────────────────────────────────────────
+# ─── Summariser ───────────────────────────────────────────────────────────────────────────────────────────────────────
 SYSTEM_PROMPT = """คุณคือ Construction Project Management Assistant สำหรับทีมงานก่อสร้าง
 หน้าที่ของคุณคือวิเคราะห์ข้อความทั้งหมดจาก LINE Group / LINE Chat ที่ได้รับ แล้วสรุปเฉพาะข้อมูลที่มีความสำคัญต่อการบริหารงานก่อสร้าง โดยต้องแยกข้อมูลตาม Project อย่างชัดเจน
 
@@ -99,20 +98,17 @@ SYSTEM_PROMPT = """คุณคือ Construction Project Management Assistant 
 - อ่านข้อความทั้งหมดก่อน แล้ววิเคราะห์ว่าแต่ละข้อความเกี่ยวข้องกับ Project ใด
 - ห้ามสรุปตามลำดับข้อความใน LINE
 - ให้จัดกลุ่มใหม่เป็น: Project → ประเด็นสำคัญ → สถานะ → ผู้รับผิดชอบ → กำหนดเวลา → สิ่งที่ต้องติดตาม
-- หากข้อความไม่มีชื่อ Project ชัดเจน ให้ใช้บริบทจากข้อความก่อนหน้าเพื่อระบุ Project
-- หากไม่สามารถระบุ Project ได้จริงๆ ให้จัดไว้ใน OTHER / UNIDENTIFIED PROJECT
 
 ระดับความสำคัญ:
 🔴 CRITICAL: กระทบ Completion Date / Critical Path / งานหยุด / Delay / ต้องตัดสินใจทันที
-🟠 HIGH: มีแนวโน้มกระทบ Schedule / งานล่าช้า / Drawing/Material/Approval ที่กำลังจะกระทบงาน
-🟡 MEDIUM: งานที่ต้องติดตาม / Pending / รอข้อมูล / รออนุมัติ
-🟢 LOW: General Update / งานปกติ On Track / ข้อมูลเพื่อรับทราบ
+🟠 HIGH: มีแนวโน้มกระทบ Schedule / งานล่าช้า
+🟡 MEDIUM: งานที่ต้องติดตาม / Pending
+🟢 LOW: General Update / งานปกติ On Track
 
 สถานะงาน: 🟢 ON TRACK | 🟡 WATCH | 🟠 AT RISK | 🔴 DELAY | ⚪ PENDING | 🔵 COMPLETED
 
 กฎเหล็ก:
-- ห้ามสร้างข้อมูลที่ไม่มีในข้อความ / ห้ามเดา Due Date หรือ Responsible Person
-- รวมข้อความที่พูดถึง Issue เดียวกัน / แยก Project ให้ถูกต้อง
+- ห้ามสร้างข้อมูลที่ไม่มีในข้อความ
 - หากมีข้อมูลขัดแย้งกัน ให้แสดง ⚠️ Conflicting Information"""
 
 USER_PROMPT_TEMPLATE = """กลุ่ม: {group_name}
@@ -122,7 +118,7 @@ USER_PROMPT_TEMPLATE = """กลุ่ม: {group_name}
 {chat_log}
 
 ---
-สร้างรายงาน DAILY LINE PROJECT SUMMARY ตาม format นี้:
+สร้างรายงาน DAILY LINE PROJECT SUMMARY:
 
 # 📊 DAILY LINE PROJECT SUMMARY
 **Date:** {date}
@@ -130,30 +126,33 @@ USER_PROMPT_TEMPLATE = """กลุ่ม: {group_name}
 ### 🚨 TOP PRIORITIES TODAY
 [รายการ 1-5 อันดับแรกที่ต้องดูทันที]
 
-**Total Projects:** X | **Critical Issues:** X | **High Priority:** X | **At Risk:** X | **Delayed:** X | **Pending Actions:** X
-
 ---
 ## 🏗️ PROJECT: [ชื่อ Project]
 ### 🔴 Critical Issues
-1. **[หัวข้อ]**
-   - Issue: [ปัญหา] | Impact: [ผลกระทบ] | Action Required: [ต้องทำอะไร]
-   - Responsible: [ถ้าระบุได้ / TBC] | Due Date: [ถ้ามี / TBC] | Status: 🔴 DELAY
-
 ### 🟠 High Priority
 ### 🟡 Follow-up / Watch List
 ### 🟢 Completed / Progress Update
 
 ---
-# 6. PROJECT SUMMARY TABLE
-| Project | Priority | Key Issue | Action Required | Responsible | Due Date | Status |
-|---------|----------|-----------|-----------------|-------------|----------|--------|
-
-# 7. ACTION ITEMS
+# ACTION ITEMS
 | # | Project | Action Item | Responsible | Due Date | Priority | Status |
 |---|---------|-------------|-------------|----------|----------|--------|
 
-หากไม่มีประเด็นสำคัญใน Project ใด ให้แสดง: 🟢 No Critical Issue / On Track
-หากไม่มีข้อมูลในส่วนใด ให้ระบุ TBC"""
+หากไม่มีประเด็นสำคัญ: 🟢 No Critical Issue / On Track"""
+
+
+def _plain_summary(group_name: str, messages: list, date_str: str, error_msg: str) -> str:
+    lines = [
+        f"📋 สรุปข้อความ LINE — {group_name}",
+        f"วันที่: {date_str}",
+        f"⚠️ AI ไม่พร้อมใช้งาน ({error_msg}) — แสดงข้อความดิบแทน",
+        "",
+        f"ข้อความทั้งหมด {len(messages)} ข้อความ:",
+        "─" * 40,
+    ]
+    for msg in messages:
+        lines.append(f"  • {msg}")
+    return "\n".join(lines)
 
 
 def summarise(group_name: str, messages: list, date_str: str = "") -> str:
@@ -163,16 +162,20 @@ def summarise(group_name: str, messages: list, date_str: str = "") -> str:
         date=date_str or "ไม่ระบุวันที่",
         chat_log=chat_log,
     )
-    response = claude.messages.create(
-        model="claude-sonnet-4-5",
-        max_tokens=4096,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return response.content[0].text
+    try:
+        response = claude.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=4096,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text
+    except Exception as e:
+        print(f"[WARN] AI summarise failed: {e} — using plain fallback")
+        return _plain_summary(group_name, messages, date_str, str(e)[:120])
 
 
-# ─── Email Sender ─────────────────────────────────────────────────────────────────────────────────
+# ─── Email Sender ─────────────────────────────────────────────────────────────────────────────────────────────────
 def send_email(subject: str, body: str):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -188,53 +191,45 @@ def send_email(subject: str, body: str):
     print(f"[Email] Sent to {EMAIL_RECIPIENT}")
 
 
-# ─── Daily Job ────────────────────────────────────────────────────────────────────────────────────
+# ─── Daily Job ────────────────────────────────────────────────────────────────────────────────────────────────────────
 def daily_summary_job():
     yesterday = (datetime.now(BANGKOK_TZ) - timedelta(days=1)).strftime("%Y-%m-%d")
     groups = get_messages_by_date(yesterday)
 
     if not groups:
-        print(f"[{datetime.now(BANGKOK_TZ)}] No messages yesterday — skipping summary.")
+        print(f"[{datetime.now(BANGKOK_TZ)}] No messages yesterday — skipping.")
         return
 
     all_summaries = []
     for group_id, data in groups.items():
         try:
             summary = summarise(data["name"], data["messages"], yesterday)
-            all_summaries.append(
-                f"━━━ กลุ่ม: {data['name']} ━━━\n{summary}"
-            )
+            all_summaries.append(f"━━━ กลุ่ม: {data['name']} ━━━\n{summary}")
             print(f"[OK] Summarised group {group_id}")
         except Exception as e:
             print(f"[ERROR] group {group_id}: {e}")
 
     if all_summaries:
-        body = (
-            f"📊 สรุปงานประจำวัน {yesterday}\n\n"
-            + "\n\n".join(all_summaries)
-        )
+        body = f"📊 สรุปงานประจำวัน {yesterday}\n\n" + "\n\n".join(all_summaries)
         try:
             send_email(f"สรุปงาน LINE {yesterday}", body)
         except Exception as e:
             print(f"[ERROR] Email failed: {e}")
 
 
-# ─── Health Check ────────────────────────────────────────────────────────────────────────────────
 @app.route("/ping", methods=["GET"])
 def ping():
     return "pong", 200
 
-# ─── Seed Test Data ──────────────────────────────────────────────────────────
+
 @app.route("/seed", methods=["GET"])
 def seed():
     today = datetime.now(BANGKOK_TZ).strftime("%Y-%m-%d")
-    save_message("test_group_001", "\u0e17\u0b35\u0b21\u0b01\u0b48\u0e2a\u0e23\u0e49\u0e32\u0e07 TEST", "\u0e1c\u0e39\u0e49\u0e08\u0e31\u0e14\u0e01\u0e32\u0e23", "\u0e17\u0e14\u0e2a\u0e2d\u0e1a: Foundation B1 \u0e40\u0e2a\u0e23\u0e47\u0e08\u0e41\u0e25\u0e49\u0e27 On Track")
-    save_message("test_group_001", "\u0e17\u0b35\u0b21\u0b01\u0b48\u0e2a\u0e23\u0e49\u0e32\u0e07 TEST", "\u0e42\u0e1f\u0e23\u0e41\u0e21\u0e19", "Rebar \u0e0a\u0e31\u0e49\u0e19 3 \u0e23\u0e2d inspect \u0e1e\u0e23\u0e38\u0e48\u0e07\u0e19\u0e35\u0e49 9\u0e42\u0e21\u0e07")
+    save_message("test_group_001", "ทีมก่อสร้าง TEST", "ผู้จัดการ", "ทดสอบ: Foundation B1 เสร็จแล้ว On Track")
+    save_message("test_group_001", "ทีมก่อสร้าง TEST", "โฟรแมน", "Rebar ชั้น 3 รอ inspect พรุ่งนี้ 9โมง")
     return f"Seeded 2 test messages for {today}", 200
 
 
-
-# ─── Manual Trigger ───────────────────────────────────────────────────────────────────────────────
 @app.route("/trigger", methods=["GET"])
 def trigger():
     try:
@@ -252,7 +247,10 @@ def trigger():
 
         all_summaries = []
         for group_id, data in groups.items():
-            summary = summarise(data["name"], data["messages"], target_date)
+            try:
+                summary = summarise(data["name"], data["messages"], target_date)
+            except Exception as e:
+                summary = _plain_summary(data["name"], data["messages"], target_date, str(e)[:120])
             all_summaries.append(f"━━━ กลุ่ม: {data['name']} ━━━\n{summary}")
 
         body = f"📊 สรุปงานประจำวัน {target_date}\n\n" + "\n\n".join(all_summaries)
@@ -262,7 +260,6 @@ def trigger():
         return f"ERROR: {e}", 500
 
 
-# ─── Webhook ──────────────────────────────────────────────────────────────────────────────────────
 @app.route("/webhook", methods=["POST"])
 def webhook():
     signature = request.headers.get("X-Line-Signature", "")
@@ -297,7 +294,6 @@ def handle_message(event):
     save_message(group_id, group_name, sender_name, message)
 
 
-# ─── Scheduler ───────────────────────────────────────────────────────────────────────────────────
 def start_scheduler():
     scheduler = BackgroundScheduler(timezone=BANGKOK_TZ)
     scheduler.add_job(daily_summary_job, "cron", hour=6, minute=30)
@@ -305,11 +301,9 @@ def start_scheduler():
     print("[Scheduler] Daily summary set for 06:30 Asia/Bangkok")
 
 
-# ─── Initialize at module load (works with gunicorn) ───────────────────────────────
 init_db()
 start_scheduler()
 
-# ─── Entry Point ──────────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
