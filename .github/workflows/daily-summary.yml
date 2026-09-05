@@ -1,0 +1,13 @@
+name: Daily Summary
+
+on:
+  schedule:
+    - cron: '30 23 * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger daily LINE summary email (06:30 BKK)
+        run: curl -sf https://yusho.onrender.com/trigger || true
