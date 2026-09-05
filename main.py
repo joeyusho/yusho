@@ -27,10 +27,23 @@ EMAIL_RECIPIENT = os.environ.get("EMAIL_RECIPIENT", "joeyusho@gmail.com")
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
-_ws_headers = {}
-_ws_id = os.environ.get("ANTHROPIC_WORKSPACE_ID", "")
-if _ws_id:
-    _ws_headers["anthropic-workspace-id"] = _ws_id
+import requests as _req
+
+def _get_workspace_id():
+    try:
+        r = _req.get(
+            "https://api.anthropic.com/v1/workspaces",
+            headers={"x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01"},
+            timeout=5,
+        )
+        data = r.json()
+        wid = os.environ.get("ANTHROPIC_WORKSPACE_ID") or (data.get("data", [{}])[0].get("id") if r.ok else None)
+        return wid
+    except Exception:
+        return os.environ.get("ANTHROPIC_WORKSPACE_ID", "")
+
+_wid = _get_workspace_id()
+_ws_headers = {"anthropic-workspace-id": _wid} if _wid else {}
 claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, default_headers=_ws_headers)
 
 BANGKOK_TZ = pytz.timezone("Asia/Bangkok")
