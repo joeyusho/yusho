@@ -27,7 +27,11 @@ EMAIL_RECIPIENT = os.environ.get("EMAIL_RECIPIENT", "joeyusho@gmail.com")
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
-claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+_ws_headers = {}
+_ws_id = os.environ.get("ANTHROPIC_WORKSPACE_ID", "")
+if _ws_id:
+    _ws_headers["anthropic-workspace-id"] = _ws_id
+claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, default_headers=_ws_headers)
 
 BANGKOK_TZ = pytz.timezone("Asia/Bangkok")
 DB_PATH = "messages.db"
