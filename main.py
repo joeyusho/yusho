@@ -183,9 +183,7 @@ def send_email(subject: str, body: str):
     msg["To"]      = EMAIL_RECIPIENT
     msg.attach(MIMEText(body, "plain", "utf-8"))
 
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.ehlo()
-        server.starttls()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)
         server.sendmail(EMAIL_SENDER, EMAIL_RECIPIENT, msg.as_string())
     print(f"[Email] Sent to {EMAIL_RECIPIENT}")
