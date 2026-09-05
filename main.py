@@ -207,6 +207,15 @@ def daily_summary_job():
 def ping():
     return "pong", 200
 
+# ─── Seed Test Data ──────────────────────────────────────────────────────────
+@app.route("/seed", methods=["GET"])
+def seed():
+    today = datetime.now(BANGKOK_TZ).strftime("%Y-%m-%d")
+    save_message("test_group_001", "\u0e17\u0b35\u0b21\u0b01\u0b48\u0e2a\u0e23\u0e49\u0e32\u0e07 TEST", "\u0e1c\u0e39\u0e49\u0e08\u0e31\u0e14\u0e01\u0e32\u0e23", "\u0e17\u0e14\u0e2a\u0e2d\u0e1a: Foundation B1 \u0e40\u0e2a\u0e23\u0e47\u0e08\u0e41\u0e25\u0e49\u0e27 On Track")
+    save_message("test_group_001", "\u0e17\u0b35\u0b21\u0b01\u0b48\u0e2a\u0e23\u0e49\u0e32\u0e07 TEST", "\u0e42\u0e1f\u0e23\u0e41\u0e21\u0e19", "Rebar \u0e0a\u0e31\u0e49\u0e19 3 \u0e23\u0e2d inspect \u0e1e\u0e23\u0e38\u0e48\u0e07\u0e19\u0e35\u0e49 9\u0e42\u0e21\u0e07")
+    return f"Seeded 2 test messages for {today}", 200
+
+
 
 # ─── Manual Trigger ───────────────────────────────────────────────────────────────────────────────
 @app.route("/trigger", methods=["GET"])
