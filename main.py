@@ -202,12 +202,36 @@ def daily_summary_job():
             print(f"[ERROR] Email failed: {e}")
 
 
-# ─── Manual Trigger ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# ─── Health Check ────────────────────────────────────────────────────────────────────────────────
+@app.route("/ping", methods=["GET"])
+def ping():
+    return "pong", 200
+
+
+# ─── Manual Trigger ───────────────────────────────────────────────────────────────────────────────
 @app.route("/trigger", methods=["GET"])
 def trigger():
     try:
-        daily_summary_job()
-        return "OK: trigger fired"
+        date_param = request.args.get("date", "")
+        if date_param == "today":
+            target_date = datetime.now(BANGKOK_TZ).strftime("%Y-%m-%d")
+        elif date_param:
+            target_date = date_param
+        else:
+            target_date = (datetime.now(BANGKOK_TZ) - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        groups = get_messages_by_date(target_date)
+        if not groups:
+            return f"No messages found for {target_date}", 200
+
+        all_summaries = []
+        for group_id, data in groups.items():
+            summary = summarise(data["name"], data["messages"], target_date)
+            all_summaries.append(f"━━━ กลุ่ม: {data['name']} ━━━\n{summary}")
+
+        body = f"📊 สรุปงานประจำวัน {target_date}\n\n" + "\n\n".join(all_summaries)
+        send_email(f"สรุปงาน LINE {target_date}", body)
+        return f"OK: trigger fired for {target_date}"
     except Exception as e:
         return f"ERROR: {e}", 500
 
